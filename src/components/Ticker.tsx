@@ -3,7 +3,7 @@
 import { motion } from 'framer-motion';
 
 const TICKER_ITEMS = [
-  'Powered by Chainlink VRF',
+  'Powered by block.prevrandao (Temporary Alternative pending ChainLInk VRF)',
   'Payments in CELO',
   'Built on Celo Sepolia',
   'ERC-8004 Agent Identity',

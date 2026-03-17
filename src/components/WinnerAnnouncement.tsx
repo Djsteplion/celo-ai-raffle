@@ -164,7 +164,7 @@ export function WinnerAnnouncement({
                       className="font-display text-xs sm:text-sm text-white/70 tracking-wider"
                       style={{ fontFamily: 'Orbitron, monospace' }}
                     >
-                      {winner.slice(0, 8)}...{winner.slice(-8)}
+                      {winner}
                     </span>
                   </div>
                 </motion.div>

@@ -4,8 +4,8 @@ import { motion } from 'framer-motion';
 
 const TICKER_ITEMS = [
   'Powered by Chainlink VRF',
-  'Payments in cUSD',
-  'Built on Celo Alfajores',
+  'Payments in CELO',
+  'Built on Celo Sepolia',
   'ERC-8004 Agent Identity',
   'x402 Payment Protocol',
   'Provably Fair Draws',

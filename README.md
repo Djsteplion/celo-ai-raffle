@@ -1,195 +1,234 @@
-# Celo Agent-Powered Raffle
+# Celo-AI-Raffle  OR CeloRaffle — Agent-Powered On-Chain Lottery
 
-A fully on-chain, agent-powered raffle/lottery built on **Celo Alfajores** testnet.
+A fully on-chain, agent-powered raffle/lottery built on **Celo Sepolia** testnet.
+
+*View CeloRaffle Live Site Here:* https://celo-ai-raffle.netlify.app/
 
 ## Stack
 
 | Layer | Technology |
 |---|---|
-| Frontend | Next.js 14, TypeScript, Tailwind CSS |
-| Smart Contracts | Solidity 0.8.20, Hardhat |
-| Randomness | Chainlink VRF v2 |
-| Wallet | Wagmi v2 + RainbowKit |
-| Payments | cUSD (ERC-20) via x402 pattern |
+| Frontend | Next.js 16.1.6, TypeScript, Tailwind CSS |
+| Smart Contracts | Solidity 0.8.20, Hardhat 2 |
+| Randomness | block.prevrandao (Chainlink VRF ready when available on Celo) |
+| Wallet | Wagmi v2 + RainbowKit v2 |
+| Payments | Native CELO (0.01 CELO per ticket) |
 | Agent Identity | ERC-8004 on-chain registration |
-| AI Commentary | OpenAI GPT-4o-mini (ARIA Agent) |
-| Chain | Celo Alfajores (testnet) |
+| AI Commentary | Google Gemini 2.0 Flash (ARIA Agent) |
+| Chain | Celo Sepolia Testnet |
+
 
 ## Architecture
-
 ```
 ┌─────────────────────────────────────────────────────────┐
-│                    Next.js Frontend                      │
+│                    Next.js 16 Frontend                   │
 │  ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────────┐  │
 │  │PrizePool │ │ Ticket   │ │ LiveDraw │ │  ARIA    │  │
 │  │ Display  │ │ Purchase │ │Animation │ │  Agent   │  │
 │  └──────────┘ └──────────┘ └──────────┘ └──────────┘  │
 └─────────────────────────────────────────────────────────┘
-         │ Wagmi/RainbowKit           │ OpenAI API
+         │ Wagmi v2 / RainbowKit v2      │ Gemini API
 ┌─────────────────────┐    ┌─────────────────────────────┐
 │   CeloRaffle.sol    │    │     /api/agent route         │
-│                     │    │   GPT-4o-mini commentary     │
+│                     │    │  Gemini 2.0 Flash commentary │
 │ ├─ ERC-8004 Agent   │    └─────────────────────────────┘
-│ ├─ Chainlink VRF    │
-│ ├─ cUSD Payments    │
+│ ├─ block.prevrandao │
+│ ├─ Native CELO      │
 │ └─ Winner Logic     │
-└─────────────────────┘
-         │
-┌─────────────────────┐
-│  Chainlink VRF v2   │
-│  (Alfajores)        │
 └─────────────────────┘
 ```
 
 ## Quick Start
 
-### 1. Install dependencies
+### 1. Clone and install
 ```bash
+git clone <your-repo>
+cd celo-raffle
 npm install
 ```
 
-### 2. Configure environment
+### 2. Install extra dependencies
 ```bash
-cp .env.local.example .env.local
-# Fill in your values
+npm install @rainbow-me/rainbowkit@2 wagmi@2 viem@2 @tanstack/react-query openai canvas-confetti framer-motion lucide-react clsx tailwind-merge axios ethers @google/generative-ai
+npm install -D hardhat@2 @nomicfoundation/hardhat-toolbox@5 @nomicfoundation/hardhat-ethers@3 @types/canvas-confetti dotenv
 ```
 
-### 3. Get testnet tokens
-- CELO: https://faucet.celo.org/alfajores
-- cUSD: Available from the faucet above
+### 3. Configure environment
+```bash
+cp .env.local.example .env.local
+```
 
-### 4. Set up Chainlink VRF subscription
-1. Go to https://vrf.chain.link/alfajores
-2. Create a subscription and fund it with LINK
-3. Note your subscription ID
-4. Update `SUBSCRIPTION_ID` in `scripts/deploy.ts`
+Fill in `.env.local`:
+```
+NEXT_PUBLIC_CONTRACT_ADDRESS=0xyour_deployed_contract_address
+NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID=your_reown_project_id
+OPENAI_API_KEY=your_gemini_api_key
+PRIVATE_KEY=your_wallet_private_key_without_0x
+```
+
+### 4. Get testnet tokens
+- **CELO** (for gas + tickets): faucet.celo.org/celo-sepolia
+- Faucet sends 5 CELO per request — more than enough
 
 ### 5. Deploy the contract
 ```bash
-npm run compile
 npm run deploy
-# Copy the contract address to NEXT_PUBLIC_CONTRACT_ADDRESS in .env.local
 ```
+Copy the deployed contract address into `NEXT_PUBLIC_CONTRACT_ADDRESS` in `.env`.
 
-### 6. Add contract to VRF subscription
-- Go back to https://vrf.chain.link/alfajores
-- Add your deployed contract address as a consumer
-
-### 7. Run the app
+### 6. Run the app
 ```bash
 npm run dev
 ```
-
 Open http://localhost:3000
 
 ---
+
+## Deploying to Netlify
+
+### 1. Push to GitHub
+```bash
+git add .
+git commit -m "initial commit"
+git push
+```
+
+### 2. Connect to Netlify
+- Go to app.netlify.com
+- Click **Add new site** → **Import from Github**
+- Select your repository
+
+### 3. Set environment variables
+In Netlify → Site configuration → Environment variables, add:
+```
+NEXT_PUBLIC_CONTRACT_ADDRESS = 0xyour_contract_address
+NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID = your_reown_project_id
+OPENAI_API_KEY = your_gemini_api_key
+```
+> ⚠️ Never add PRIVATE_KEY to Netlify — it is only needed for local deployment
+
+### 4. Add netlify.toml
+Create `netlify.toml` in your project root:
+```toml
+[build]
+  command = "npm run build"
+  publish = ".next"
+
+[build.environment]
+  SECRETS_SCAN_OMIT_KEYS = "NEXT_PUBLIC_CONTRACT_ADDRESS,NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID,OPENAI_API_KEY"
+```
 
 ## Contract Details
 
 ### CeloRaffle.sol
 
-**Celo Alfajores addresses:**
-- VRF Coordinator: `0x326C977E6efc84E512bB9C30f76E30c160eD06FB`
-- cUSD: `0x874069Fa1Eb16D44d622F2e0Ca25eeA172369bC1`
-- LINK Token: `0xa36085F69e2889c224210F603D836748e7dC0088`
+**Celo Sepolia details:**
+- Chain ID: `11142220`
+- RPC: `https://forno.celo-sepolia.celo-testnet.org`
+- Explorer: `https://sepolia.celoscan.io`
+
+**Randomness:**
+Uses `block.prevrandao` combined with `block.timestamp`, `block.number`, `participants.length`, and `msg.sender` for on-chain randomness. Architecture is ready for Chainlink VRF once it deploys on Celo.
 
 **Key functions:**
 ```solidity
-purchaseTickets(uint256 numTickets)  // Buy tickets with cUSD
-requestDraw()                         // Owner: trigger Chainlink VRF draw
-startNewRaffle()                      // Owner: reset for new round
-registerAgent(bytes32, string)        // ERC-8004: register AI agent
-activateAgent(bytes32)                // Owner: set active agent
+purchaseTickets(uint256 numTickets) payable  // Buy tickets with native CELO
+requestDraw()                                 // Owner: trigger draw
+startNewRaffle()                              // Owner: reset for new round
+registerAgent(bytes32, string)               // ERC-8004: register AI agent
+activateAgent(bytes32)                       // Owner: set active agent
 ```
 
 **Raffle states:**
-- `OPEN (0)` — Tickets on sale
-- `DRAWING (1)` — VRF requested, awaiting randomness
-- `CLOSED (2)` — Winner paid out
+- `OPEN (0)` —> Tickets on sale at 0.01 CELO each
+- `DRAWING (1)` —> Draw executing, winner being selected
+- `CLOSED (2)` —> Winner paid out, ready for new round
+
+**Prize distribution:**
+- 95% → Winner
+- 5% → Contract owner (protocol fee)
 
 ### ERC-8004 Agent Identity
-
-The contract implements a simplified ERC-8004 pattern for on-chain AI agent identity:
-
 ```solidity
 struct AgentIdentity {
     bytes32 agentId;      // Unique agent identifier
-    string metadata;       // JSON or IPFS CID with agent capabilities
-    address operator;      // Wallet that registered the agent
+    string metadata;      // JSON with agent capabilities
+    address operator;     // Wallet that registered the agent
     bool active;          // Registration status
     uint256 registeredAt; // Timestamp
 }
 ```
 
-### x402 Payment Protocol
-
-Ticket purchases follow the x402 payment flow:
-1. User calls `approve(contractAddress, amount)` on cUSD
-2. User calls `purchaseTickets(n)` — contract pulls cUSD
-3. Contract records participant entries
-4. On draw: 95% goes to winner, 5% protocol fee
-
----
-
 ## ARIA Agent
 
-ARIA (Autonomous Raffle Intelligence Agent) provides live commentary powered by GPT-4o-mini.
+ARIA (Autonomous Raffle Intelligence Agent) provides live commentary powered by *Google Gemini 2.0 Flash*.
 
-**Trigger events:**
-- `welcome` — When app loads
-- `ticket_purchase` — When someone buys tickets
-- `draw_start` — When draw is requested
-- `winner_announced` — When winner is selected
+*Trigger events:*
+- `welcome` —> When app loads
+- `ticket_purchase` —> When someone buys tickets
+- `draw_start` —> When draw is requested
+- `winner_announced` —> When winner is selected
 
-ARIA is registered on-chain with an ERC-8004 identity at deploy time.
+*ARIA is registered on-chain with an ERC-8004 identity at deploy time.*
 
----
+## Admin Controls
+Admin privileges belong to the wallet that deployed the contract 
+
+- **Only the owner wallet** can trigger draws and start new raffles
+- The Admin Panel is visible to all users but transactions revert for non-owners
+- Security is enforced on-chain — frontend visibility is intentional and transparent
+
 
 ## Project Structure
-
 ```
 celo-raffle/
 ├── contracts/
-│   └── CeloRaffle.sol          # Main raffle contract
+│   └── CeloRaffle.sol           # Main raffle contract
 ├── scripts/
-│   └── deploy.ts               # Deployment script
+│   └── deploy.ts                # One-time deployment script
 ├── src/
 │   ├── app/
-│   │   ├── api/agent/route.ts  # ARIA agent API endpoint
+│   │   ├── api/agent/route.ts   # ARIA agent API endpoint
 │   │   ├── globals.css
 │   │   ├── layout.tsx
 │   │   └── page.tsx
 │   ├── components/
-│   │   ├── AdminPanel.tsx       # Owner controls
-│   │   ├── AgentPanel.tsx       # ARIA commentary UI
-│   │   ├── LiveDraw.tsx         # Slot machine animation
+│   │   ├── AdminPanel.tsx        # Owner controls
+│   │   ├── AgentPanel.tsx        # ARIA commentary UI
+│   │   ├── LiveDraw.tsx          # Slot machine animation
 │   │   ├── Navbar.tsx
-│   │   ├── PrizePool.tsx        # Prize display
-│   │   ├── RaffleApp.tsx        # Main orchestrator
+│   │   ├── PrizePool.tsx         # Prize display
+│   │   ├── RaffleApp.tsx         # Main orchestrator
 │   │   ├── Ticker.tsx
-│   │   ├── TicketPurchase.tsx   # Buy tickets UI
-│   │   ├── WalletProvider.tsx   # Wagmi + RainbowKit
-│   │   └── WinnerAnnouncement.tsx # Confetti modal
+│   │   ├── TicketPurchase.tsx    # Buy tickets UI
+│   │   ├── WalletProvider.tsx    # Wagmi + RainbowKit
+│   │   └── WinnerAnnouncement.tsx
 │   ├── hooks/
-│   │   ├── useAgent.ts          # ARIA commentary hook
-│   │   ├── useConfetti.ts       # Confetti effect
-│   │   └── useRaffle.ts         # All contract interactions
+│   │   ├── useAgent.ts           # ARIA commentary hook
+│   │   ├── useConfetti.ts        # Confetti effect
+│   │   └── useRaffle.ts          # All contract interactions
 │   └── lib/
-│       ├── agent.ts             # OpenAI integration
-│       ├── contracts.ts         # ABI + addresses
-│       └── wagmi.ts             # Chain config
+│       ├── agent.ts              # Gemini AI integration
+│       ├── contracts.ts          # ABI + Celo Sepolia config
+│       └── wagmi.ts              # Chain config
+├── netlify.toml                  # Netlify deployment config
 ├── hardhat.config.ts
 ├── next.config.js
 └── package.json
 ```
 
----
-
 ## Testnet Resources
 
 | Resource | URL |
 |---|---|
-| Celo Faucet | https://faucet.celo.org/alfajores |
-| Alfajores Explorer | https://alfajores.celoscan.io |
-| Chainlink VRF | https://vrf.chain.link/alfajores |
-| WalletConnect | https://cloud.walletconnect.com |
+| Celo Faucet | faucet.celo.org/celo-sepolia |
+| Celo Sepolia Explorer | sepolia.celoscan.io |
+| Reown (WalletConnect) | cloud.reown.com |
+| Gemini API | aistudio.google.com |
+| Celo Docs | docs.celo.org |
+
+---
+
+## Important Note
+
+- **Testnet only** — This project runs on Celo Sepolia testnet. All tokens have no real value.
